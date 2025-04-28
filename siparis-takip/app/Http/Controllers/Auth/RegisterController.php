@@ -8,6 +8,7 @@ use App\Models\Kullanici;
 use App\Models\Rol;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rules;
 
 class RegisterController extends Controller
@@ -28,32 +29,55 @@ class RegisterController extends Controller
             'domain' => ['required', 'string', 'max:255', 'unique:firmalar'],
         ]);
 
-        // Yeni firma oluştur
-        $firma = Firma::create([
-            'firma_adi' => $request->firma_adi,
-            'firma_kodu' => $request->firma_kodu,
-            'domain' => $request->domain,
-            'email' => $request->email,
-        ]);
+        try {
+            // Yeni firma oluştur
+            $firma = Firma::create([
+                'firma_adi' => $request->firma_adi,
+                'firma_kodu' => $request->firma_kodu,
+                'domain' => $request->domain,
+                'email' => $request->email,
+                'aktif' => true,
+            ]);
 
-        // Yönetici rolü oluştur
-        $rol = Rol::create([
-            'firma_id' => $firma->id,
-            'rol_adi' => 'Yönetici',
-            'izinler' => json_encode(['*']), // Tüm izinler
-        ]);
+            // Yönetici rolü oluştur
+            $rol = Rol::create([
+                'firma_id' => $firma->id,
+                'rol_adi' => 'Yönetici',
+                'izinler' => ['*'], // Tüm izinler
+            ]);
 
-        // İlk kullanıcıyı oluştur
-        $kullanici = Kullanici::create([
-            'firma_id' => $firma->id,
-            'ad' => explode(' ', $request->name)[0],
-            'soyad' => count(explode(' ', $request->name)) > 1 ? explode(' ', $request->name)[1] : '',
-            'email' => $request->email,
-            'password' => Hash::make($request->password),
-            'rol_id' => $rol->id,
-        ]);
+            // Ad ve soyadı bölelim
+            $nameParts = explode(' ', $request->name, 2);
+            $ad = $nameParts[0];
+            $soyad = count($nameParts) > 1 ? $nameParts[1] : '';
 
-        return redirect('/auth/boxed-signin')
-            ->with('success', 'Kayıt başarılı! Giriş yapabilirsiniz.');
+            // İlk kullanıcıyı oluştur
+            $kullanici = Kullanici::create([
+                'firma_id' => $firma->id,
+                'ad' => $ad,
+                'soyad' => $soyad,
+                'email' => $request->email,
+                'password' => Hash::make($request->password),
+                'rol_id' => $rol->id,
+                'aktif' => true,
+            ]);
+
+            Log::info('Yeni kayıt oluşturuldu', [
+                'kullanici_id' => $kullanici->id,
+                'firma_id' => $firma->id,
+                'email' => $request->email,
+            ]);
+
+            return redirect('/auth/boxed-signin')
+                ->with('success', 'Kayıt başarılı! Giriş yapabilirsiniz.');
+
+        } catch (\Exception $e) {
+            Log::error('Kayıt oluşturma hatası', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            return back()->withErrors(['genel' => 'Kayıt sırasında bir hata oluştu: ' . $e->getMessage()]);
+        }
     }
 }

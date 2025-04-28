@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Kullanici;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
 
 class LoginController extends Controller
@@ -22,12 +23,24 @@ class LoginController extends Controller
             'password' => 'required|string',
         ]);
 
-        // Kullanıcıyı aktif mi diye kontrol et
+        // Kullanıcıyı bul ve debug bilgisi ekle
         $kullanici = Kullanici::where('email', $request->email)->first();
+        Log::info('Giriş denemesi', [
+            'email' => $request->email,
+            'kullanici_bulundu' => (bool) $kullanici,
+            'kullanici_aktif' => $kullanici ? $kullanici->aktif : null,
+            'firma_aktif' => $kullanici && $kullanici->firma ? $kullanici->firma->aktif : null,
+        ]);
 
-        if (!$kullanici || !$kullanici->aktif) {
+        if (!$kullanici) {
             throw ValidationException::withMessages([
-                'email' => ['Bu hesap aktif değil veya kullanıcı bulunamadı.'],
+                'email' => ['Bu e-posta adresiyle kayıtlı kullanıcı bulunamadı.'],
+            ]);
+        }
+
+        if (!$kullanici->aktif) {
+            throw ValidationException::withMessages([
+                'email' => ['Bu hesap aktif değil.'],
             ]);
         }
 
@@ -38,6 +51,7 @@ class LoginController extends Controller
             ]);
         }
 
+        // Kimlik doğrulama bilgilerini tam olarak belirt
         if (Auth::attempt([
             'email' => $request->email,
             'password' => $request->password
@@ -50,8 +64,13 @@ class LoginController extends Controller
             return redirect()->intended('/');
         }
 
+        // Kimlik doğrulama başarısız olduğunda daha fazla bilgi ekle
+        Log::warning('Kimlik doğrulama başarısız', [
+            'email' => $request->email,
+        ]);
+
         throw ValidationException::withMessages([
-            'email' => [trans('auth.failed')],
+            'email' => ['Girilen bilgiler kayıtlarımızla eşleşmiyor.'],
         ]);
     }
 

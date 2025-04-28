@@ -18,7 +18,7 @@ class Rol extends Model
     ];
 
     protected $casts = [
-        'izinler' => 'json',
+        'izinler' => 'array',
     ];
 
     public function firma()
@@ -29,5 +29,20 @@ class Rol extends Model
     public function kullanicilar()
     {
         return $this->hasMany(Kullanici::class, 'rol_id');
+    }
+
+    // Rol için yetki kontrolü
+    public function hasPermission($permission)
+    {
+        if (empty($this->izinler)) {
+            return false;
+        }
+
+        // Tüm izinlere sahipse
+        if (in_array('*', $this->izinler)) {
+            return true;
+        }
+
+        return in_array($permission, $this->izinler);
     }
 }

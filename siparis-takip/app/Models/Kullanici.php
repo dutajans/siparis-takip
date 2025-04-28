@@ -13,11 +13,6 @@ class Kullanici extends Authenticatable
 
     protected $table = 'kullanicilar';
 
-    /**
-     * The attributes that are mass assignable.
-     *
-     * @var array<int, string>
-     */
     protected $fillable = [
         'firma_id',
         'ad',
@@ -30,24 +25,15 @@ class Kullanici extends Authenticatable
         'aktif',
     ];
 
-    /**
-     * The attributes that should be hidden for serialization.
-     *
-     * @var array<int, string>
-     */
     protected $hidden = [
         'password',
         'remember_token',
     ];
 
-    /**
-     * The attributes that should be cast.
-     *
-     * @var array<string, string>
-     */
     protected $casts = [
         'email_verified_at' => 'datetime',
         'son_giris_tarihi' => 'datetime',
+        'aktif' => 'boolean',
     ];
 
     public function firma()
@@ -64,5 +50,11 @@ class Kullanici extends Authenticatable
     public function getAdSoyadAttribute()
     {
         return "{$this->ad} {$this->soyad}";
+    }
+
+    // Laravel Auth ile uyumluluk için getName metodu
+    public function getNameAttribute()
+    {
+        return $this->ad_soyad;
     }
 }
