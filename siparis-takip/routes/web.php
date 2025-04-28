@@ -1,6 +1,8 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\Auth\LoginController;
+use App\Http\Controllers\Auth\RegisterController;
 
 Route::view('/', 'index');
 Route::view('/analytics', 'analytics');
@@ -122,14 +124,14 @@ Auth::routes();
 
 Route::get('/home', [App\Http\Controllers\HomeController::class, 'index'])->name('home');
 
-// Auth Routes
-Route::get('/auth/boxed-signin', [App\Http\Controllers\Auth\LoginController::class, 'showLoginForm'])->name('login');
-Route::post('/auth/login', [App\Http\Controllers\Auth\LoginController::class, 'login']);
-Route::post('/auth/boxed-signin', [App\Http\Controllers\Auth\LoginController::class, 'login']);
-Route::post('/logout', [App\Http\Controllers\Auth\LoginController::class, 'logout'])->name('logout');
+// Authentication Routes
+Route::get('/auth/boxed-signin', [LoginController::class, 'showLoginForm'])->name('login');
+Route::post('/auth/login', [LoginController::class, 'login']);
+Route::post('/logout', [LoginController::class, 'logout'])->name('logout');
 
-Route::get('/auth/boxed-signup', [App\Http\Controllers\Auth\RegisterController::class, 'showRegistrationForm'])->name('register');
-Route::post('/auth/boxed-signup', [App\Http\Controllers\Auth\RegisterController::class, 'register']);
+// Registration Routes
+Route::get('/auth/boxed-signup', [RegisterController::class, 'showRegistrationForm'])->name('register');
+Route::post('/auth/register', [RegisterController::class, 'register']);
 
 Route::get('/auth/boxed-password-reset', [App\Http\Controllers\Auth\ForgotPasswordController::class, 'showLinkRequestForm'])->name('password.request');
 Route::post('/auth/boxed-password-reset', [App\Http\Controllers\Auth\ForgotPasswordController::class, 'sendResetLinkEmail'])->name('password.email');
@@ -138,10 +140,10 @@ Route::post('/auth/boxed-reset-password', [App\Http\Controllers\Auth\ResetPasswo
 
 // Auth Middleware ile korunan rotalar
 Route::middleware(['auth'])->group(function () {
-    // Ana Sayfa
+    // Ana sayfa
     Route::get('/', function () {
         return view('index');
-    });
+    })->middleware('auth');
 
     // Kullanıcı Yönetimi (sadece yetkiliye gösterilecek)
     Route::middleware(['can:yonet-kullanicilar'])->group(function () {

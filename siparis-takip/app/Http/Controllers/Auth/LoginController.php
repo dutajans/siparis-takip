@@ -11,6 +11,9 @@ use Illuminate\Validation\ValidationException;
 
 class LoginController extends Controller
 {
+    // Kullanıcı başarılı giriş yaptıktan sonra yönlendirilecek URL
+    protected $redirectTo = '/';
+
     public function showLoginForm()
     {
         return view('auth.boxed-signin');
@@ -23,22 +26,25 @@ class LoginController extends Controller
             'password' => 'required',
         ]);
 
-        // Kullanıcıyı bul (debug için)
+        // Debug için kullanıcıyı kontrol et
         $kullanici = Kullanici::where('email', $request->email)->first();
         Log::info('Giriş denemesi:', [
             'email' => $request->email,
             'kullanici_var_mi' => (bool)$kullanici,
-            'ip' => $request->ip(),
+            'ip' => $request->ip()
         ]);
 
         // Login girişimi
         if (Auth::attempt(['email' => $request->email, 'password' => $request->password], $request->boolean('remember'))) {
-            // Başarılı giriş
+            $request->session()->regenerate();
+
             Log::info('Giriş başarılı', ['user_id' => Auth::id()]);
-            return redirect()->intended('/');
+
+            // Başarılı giriş sonrası ana sayfaya yönlendir
+            return redirect()->intended($this->redirectTo);
         }
 
-        // Başarısız giriş
+        // Başarısız giriş durumunda
         Log::warning('Giriş başarısız', ['email' => $request->email]);
 
         throw ValidationException::withMessages([
@@ -49,8 +55,10 @@ class LoginController extends Controller
     public function logout(Request $request)
     {
         Auth::logout();
+
         $request->session()->invalidate();
         $request->session()->regenerateToken();
+
         return redirect('/auth/boxed-signin');
     }
 }
