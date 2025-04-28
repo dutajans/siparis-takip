@@ -124,6 +124,7 @@ Route::get('/home', [App\Http\Controllers\HomeController::class, 'index'])->name
 
 // Auth Routes
 Route::get('/auth/boxed-signin', [App\Http\Controllers\Auth\LoginController::class, 'showLoginForm'])->name('login');
+Route::post('/auth/login', [App\Http\Controllers\Auth\LoginController::class, 'login']);
 Route::post('/auth/boxed-signin', [App\Http\Controllers\Auth\LoginController::class, 'login']);
 Route::post('/logout', [App\Http\Controllers\Auth\LoginController::class, 'logout'])->name('logout');
 

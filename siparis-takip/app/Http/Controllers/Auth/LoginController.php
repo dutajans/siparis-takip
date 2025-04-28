@@ -20,67 +20,37 @@ class LoginController extends Controller
     {
         $request->validate([
             'email' => 'required|email',
-            'password' => 'required|string',
+            'password' => 'required',
         ]);
 
-        // Kullanıcıyı bul ve debug bilgisi ekle
+        // Kullanıcıyı bul (debug için)
         $kullanici = Kullanici::where('email', $request->email)->first();
-        Log::info('Giriş denemesi', [
+        Log::info('Giriş denemesi:', [
             'email' => $request->email,
-            'kullanici_bulundu' => (bool) $kullanici,
-            'kullanici_aktif' => $kullanici ? $kullanici->aktif : null,
-            'firma_aktif' => $kullanici && $kullanici->firma ? $kullanici->firma->aktif : null,
+            'kullanici_var_mi' => (bool)$kullanici,
+            'ip' => $request->ip(),
         ]);
 
-        if (!$kullanici) {
-            throw ValidationException::withMessages([
-                'email' => ['Bu e-posta adresiyle kayıtlı kullanıcı bulunamadı.'],
-            ]);
-        }
-
-        if (!$kullanici->aktif) {
-            throw ValidationException::withMessages([
-                'email' => ['Bu hesap aktif değil.'],
-            ]);
-        }
-
-        // Firma aktif mi kontrol et
-        if (!$kullanici->firma || !$kullanici->firma->aktif) {
-            throw ValidationException::withMessages([
-                'email' => ['Bu hesaba bağlı firma aktif değil.'],
-            ]);
-        }
-
-        // Kimlik doğrulama bilgilerini tam olarak belirt
-        if (Auth::attempt([
-            'email' => $request->email,
-            'password' => $request->password
-        ], $request->filled('remember'))) {
-            // Giriş başarılı
-            $kullanici->son_giris_tarihi = now();
-            $kullanici->save();
-
-            $request->session()->regenerate();
+        // Login girişimi
+        if (Auth::attempt(['email' => $request->email, 'password' => $request->password], $request->boolean('remember'))) {
+            // Başarılı giriş
+            Log::info('Giriş başarılı', ['user_id' => Auth::id()]);
             return redirect()->intended('/');
         }
 
-        // Kimlik doğrulama başarısız olduğunda daha fazla bilgi ekle
-        Log::warning('Kimlik doğrulama başarısız', [
-            'email' => $request->email,
-        ]);
+        // Başarısız giriş
+        Log::warning('Giriş başarısız', ['email' => $request->email]);
 
         throw ValidationException::withMessages([
-            'email' => ['Girilen bilgiler kayıtlarımızla eşleşmiyor.'],
+            'email' => [trans('auth.failed')],
         ]);
     }
 
     public function logout(Request $request)
     {
         Auth::logout();
-
         $request->session()->invalidate();
         $request->session()->regenerateToken();
-
         return redirect('/auth/boxed-signin');
     }
 }
